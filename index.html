@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Rating Widget</title>
+  </head>
+  <body>
+    <h1>Rating Widget</h1>
+    <rating-widget max="5"></rating-widget>
+    <noscript>
+      <form action="https://httpbin.org/post" method="POST">
+        <label for="rating">How satisfied are you?</label>
+        <input
+          type="hidden"
+          name="question"
+          value="How satisfied are you?"
+        />
+        <input type="hidden" name="sentBy" value="HTML" />
+        <input
+          type="number"
+          id="rating"
+          name="rating"
+          min="1"
+          max="5"
+          value="0"
+          required
+        />
+
+        <button type="submit">Submit</button>
+      </form>
+    </noscript>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        class RatingWidget extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: "open" });
+            this.currentRating = 0;
+            this.maxRating = Math.min(
+              Math.max(parseInt(this.getAttribute("max")) || 3),
+              10
+            );
+            this.build();
+          }
+
+          build() {
+            const shadow = this.shadowRoot;
+            const starContainer = document.createElement("div");
+
+            for (let i = 1; i <= this.maxRating; i++) {
+              let star = document.createElement("span");
+              star.innerHTML = "★";
+              star.style.cursor = "pointer";
+              star.style.color = "grey";
+              star.style.fontSize = "2rem";
+
+              star.onmouseover = () => this.highlightStars(i);
+              star.onmouseout = () => this.resetStars();
+              star.onclick = () => this.setRating(i);
+
+              starContainer.appendChild(star);
+            }
+
+            shadow.appendChild(starContainer);
+            this.messageDiv = document.createElement("div");
+            shadow.appendChild(this.messageDiv);
+          }
+
+          highlightStars(rating) {
+            const stars = this.shadowRoot.querySelectorAll("span");
+            stars.forEach((star, index) => {
+              star.style.color = index < rating ? "gold" : "grey";
+            });
+          }
+
+          resetStars() {
+            const stars = this.shadowRoot.querySelectorAll("span");
+            stars.forEach((star, index) => {
+              star.style.color = index < this.currentRating ? "gold" : "grey";
+            });
+          }
+
+          setRating(rating) {
+            this.currentRating = rating;
+            const percentage = (rating / this.maxRating) * 100;
+            this.messageDiv.textContent =
+              percentage >= 80
+                ? "Thank you for the positive rating!"
+                : "We acknowledge the rating and will try to improve.";
+            this.sendRating(rating);
+          }
+
+          sendRating(rating) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "https://httpbin.org/post", true);
+            xhr.setRequestHeader("X-Sent-By", "JavaScript");
+            xhr.setRequestHeader(
+              "Content-Type",
+              "application/x-www-form-urlencoded"
+            );
+
+            xhr.onreadystatechange = function () {
+              if (this.readyState === XMLHttpRequest.DONE) {
+                if (this.status === 200) {
+                  console.log("Response:", JSON.parse(this.responseText));
+                } else {
+                  console.log("Error with the request:", this.status);
+                }
+              }
+            };
+            const formData = `rating=${rating}&sentBy=JS`;
+            xhr.send(formData);
+          }
+        }
+
+        customElements.define("rating-widget", RatingWidget);
+      });
+    </script>
+  </body>
+</html>
